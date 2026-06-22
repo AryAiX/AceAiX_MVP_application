@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Home, Rss, Target, MessageSquare } from 'lucide-react-native';
+import { Home, Rss, Target, User } from 'lucide-react-native';
 import { Colors, Typography, Spacing } from '@/constants/theme';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { AppDrawer } from '@/components/AppDrawer';
@@ -55,15 +55,15 @@ export default function TabsLayout() {
             }}
           />
           <Tabs.Screen
-            name="messages"
+            name="profile"
             options={{
-              title: 'Messages',
-              tabBarLabel: 'Messages',
-              tabBarIcon: ({ color, size }) => <MessageSquare color={color} size={size} />,
+              title: 'Profile',
+              tabBarLabel: 'Profile',
+              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
             }}
           />
-          {/* Hidden screens — accessible via drawer */}
-          <Tabs.Screen name="profile" options={{ href: null }} />
+          {/* Hidden screens — accessible via header / drawer */}
+          <Tabs.Screen name="messages" options={{ href: null }} />
           <Tabs.Screen name="performance" options={{ href: null }} />
           <Tabs.Screen name="settings" options={{ href: null }} />
           <Tabs.Screen name="notifications" options={{ href: null }} />

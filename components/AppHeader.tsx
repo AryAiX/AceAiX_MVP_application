@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Menu, Bell, Search } from 'lucide-react-native';
+import { Menu, Bell, MessageSquare, Search } from 'lucide-react-native';
 import { Colors, Typography, Spacing } from '@/constants/theme';
 import { useDrawer } from '@/context/DrawerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -27,6 +27,9 @@ export function AppHeader({ title }: AppHeaderProps) {
         </TouchableOpacity>
         <Text style={s.title} numberOfLines={1}>{title}</Text>
         <View style={s.right}>
+          <TouchableOpacity style={s.iconBtn} hitSlop={8} onPress={() => router.push('/(tabs)/messages' as any)}>
+            <MessageSquare color={Colors.textMuted} size={22} />
+          </TouchableOpacity>
           <TouchableOpacity style={s.bellWrap} hitSlop={8} onPress={() => router.push('/(tabs)/notifications')}>
             <Bell color={unreadCount > 0 ? Colors.primary : Colors.textMuted} size={22} />
             {unreadCount > 0 && (
@@ -84,6 +87,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.lg,
   },
+  iconBtn:  { position: 'relative' },
   bellWrap: { position: 'relative' },
   badge: {
     position: 'absolute',
