@@ -62,6 +62,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const PROFILE_COLUMNS =
   'id, role, full_name, first_name, last_name, avatar_url, is_verified, is_minor, age_band, is_discoverable, onboarding_completed, allow_messages_from, followers_count, following_count';
 
+const SESSION_RESTORE_TIMEOUT_MS = 12_000;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
@@ -100,24 +102,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    let settled = false;
+    const finish = (nextSession: Session | null, nextProfile: AccountProfile | null) => {
+      if (settled || !mounted.current) return;
+      settled = true;
+      setSession(nextSession);
+      setProfile(nextProfile);
+      setLoading(false);
+    };
+
+    const timer = setTimeout(() => {
+      finish(null, null);
+    }, SESSION_RESTORE_TIMEOUT_MS);
+
     supabase.auth
       .getSession()
       .then(async ({ data }) => {
-        if (!mounted.current) return;
-        setSession(data.session ?? null);
-        if (data.session?.user) {
-          setProfile(await loadProfile(data.session.user.id));
+        if (settled || !mounted.current) return;
+        const next = data.session ?? null;
+        if (!next?.user) {
+          finish(null, null);
+          return;
         }
+        const nextProfile = await loadProfile(next.user.id);
+        if (settled || !mounted.current) return;
+        finish(next, nextProfile);
+      })
+      .catch(() => {
+        finish(null, null);
       })
       .finally(() => {
-        if (mounted.current) setLoading(false);
+        clearTimeout(timer);
       });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
+    /* Do not await Supabase inside this subscriber. auth-js holds a lock
+       while the callback runs; awaiting getSession/from() here deadlocks
+       signUp and leaves the account-step spinner spinning. */
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!mounted.current) return;
       setSession(next ?? null);
-
-      if (next?.user) {
+      if (!next?.user) {
+        setProfile(null);
+        return;
+      }
+      void (async () => {
         /* The signup trigger provisions profile rows; on the very first
            SIGNED_IN they may not be visible yet, so retry briefly. */
         let p = await loadProfile(next.user.id);
@@ -126,13 +154,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           p = await loadProfile(next.user.id);
         }
         if (mounted.current) setProfile(p);
-      } else {
-        setProfile(null);
-      }
+      })();
     });
 
     return () => {
       mounted.current = false;
+      clearTimeout(timer);
       sub.subscription.unsubscribe();
     };
   }, [loadProfile]);
@@ -148,12 +175,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
     if (error) throw new AppError(error);
-  }, []);
+
+    const next = data.session ?? null;
+    setSession(next);
+    if (!next?.user) {
+      throw new AppError('Sign-in did not start a session. Please try again.');
+    }
+
+    let nextProfile = await loadProfile(next.user.id);
+    if (!nextProfile) {
+      await new Promise((r) => setTimeout(r, 600));
+      nextProfile = await loadProfile(next.user.id);
+    }
+    setProfile(nextProfile);
+    if (!nextProfile) {
+      throw new AppError(
+        'Signed in, but we could not load your profile. Check your connection and try again.',
+      );
+    }
+  }, [loadProfile]);
 
   const signUp = useCallback<AuthContextValue['signUp']>(async (input) => {
     const { data, error } = await supabase.auth.signUp({

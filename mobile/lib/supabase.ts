@@ -79,7 +79,10 @@ export const supabase: SupabaseClient = createClient(
       persistSession: true,
       // Native apps have no URL to parse a session out of.
       detectSessionInUrl: Platform.OS === 'web',
-      flowType: 'pkce',
+      // Expo Go has no WebCrypto, so PKCE falls back to the insecure `plain`
+      // challenge and can hang or be rejected. Implicit is enough for
+      // email/password on device; keep PKCE on web.
+      flowType: Constants.appOwnership === 'expo' || Platform.OS !== 'web' ? 'implicit' : 'pkce',
     },
     global: {
       headers: { 'x-application-name': 'aceaix-mobile' },

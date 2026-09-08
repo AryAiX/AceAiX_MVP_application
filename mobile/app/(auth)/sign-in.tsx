@@ -47,7 +47,7 @@ export default function SignInScreen() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-      // The gate in app/_layout.tsx takes it from here.
+      router.replace(Routes.home);
     } catch (err) {
       const friendly = toFriendlyError(err);
       const message = friendly.message;

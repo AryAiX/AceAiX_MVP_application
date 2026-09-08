@@ -111,6 +111,27 @@ function interpolate(template: string, vars?: Vars): string {
 }
 
 /**
+ * CLDR plural category for `count`.
+ *
+ * Expo Go's Hermes does not ship `Intl.PluralRules` (a custom native build
+ * usually does). `new undefined()` is the "Cannot read property 'prototype'
+ * of undefined" crash on AccountStep. Fall back to English one/other when
+ * the constructor is missing or throws; `_other` is already the last resort
+ * in `lookup`.
+ */
+function pluralCategory(code: LanguageCode, count: number): string {
+  const PluralRules = typeof Intl !== 'undefined' ? Intl.PluralRules : undefined;
+  if (typeof PluralRules === 'function') {
+    try {
+      return new PluralRules(code).select(count);
+    } catch {
+      /* Expo Go / incomplete Hermes stub */
+    }
+  }
+  return count === 1 ? 'one' : 'other';
+}
+
+/**
  * Resolve a dotted key against a catalogue, falling back to English and then
  * to the key itself — a visible key in the UI is a bug report; a blank space
  * is a mystery.
@@ -126,7 +147,7 @@ function lookup(
 
   // Plural forms: `likes_one`, `likes_other`, and for Arabic `likes_zero` etc.
   if (value === undefined && vars && typeof vars.count === 'number') {
-    const category = new Intl.PluralRules(code).select(vars.count);
+    const category = pluralCategory(code, vars.count);
     const last = path[path.length - 1];
     const stem = path.slice(0, -1);
     value =

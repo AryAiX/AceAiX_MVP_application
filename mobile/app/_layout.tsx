@@ -63,8 +63,12 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Signed in. Wait for the profile row before deciding anything else.
-    if (!profile) return;
+    // Signed in but the profile never arrived. Staying here pins `/` on the
+    // entry spinner forever; send them to welcome instead of a blank screen.
+    if (!profile) {
+      if (!inAuth && !isPublic) router.replace('/(auth)/welcome');
+      return;
+    }
 
     if (!profile.onboarding_completed) {
       if (!inOnboarding) router.replace('/(onboarding)');

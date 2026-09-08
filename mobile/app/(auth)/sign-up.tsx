@@ -38,6 +38,20 @@ import {
 const STEPS = ['role', 'name', 'dob', 'account'] as const;
 type StepKey = (typeof STEPS)[number];
 
+const SIGN_UP_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Sign-up timed out. Check your connection and try again.')),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 export default function SignUpScreen() {
   const theme = useTheme();
   const t = useT();
@@ -120,13 +134,16 @@ export default function SignUpScreen() {
       // write with until the link is clicked. Onboarding applies it.
       await stashPendingDateOfBirth(email, toIsoDate(dob));
 
-      const { needsEmailConfirmation } = await signUp({
-        email,
-        password,
-        firstName,
-        lastName,
-        role,
-      });
+      const { needsEmailConfirmation } = await withTimeout(
+        signUp({
+          email,
+          password,
+          firstName,
+          lastName,
+          role,
+        }),
+        SIGN_UP_TIMEOUT_MS,
+      );
 
       if (needsEmailConfirmation) {
         router.replace({
