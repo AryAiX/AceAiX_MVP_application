@@ -1,35 +1,47 @@
-# dependencies
+# Dependencies
 node_modules/
+**/node_modules/
 
-# expo
-.expo/
+# Build output
 dist/
-web-build/
-expo-env.d.ts
+build/
+.vite/
 
-# native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Test and QA artifacts
+test-results/
+playwright-report/
+screenshots/
+**/test-results/
+**/playwright-report/
+**/screenshots/
 
-# metro
-.metro-health-check*
+# Prototype/editor generated metadata
+.bolt/
+**/.bolt/
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macos
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
+# Environment & secrets — NEVER commit these
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-# typescript
-*.tsbuildinfo
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Logs & misc
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+*.local
+
+# Keep the original prototype archive out of the repo
+project-bolt-*.zip
+.vercel
+
+# e2e walkthrough screenshots — regenerated on every run
+mobile/tests/e2e/shots/
